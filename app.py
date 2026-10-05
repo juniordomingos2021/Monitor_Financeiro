@@ -53,7 +53,7 @@ for i, (nome, ticker) in enumerate(pares.items()):
             st.warning(f"A sincronizar {nome}...")
 
 st.markdown("---")
-st.info("💡 Atualização automática ativada: os dados são renovados a cada 5 segundos.")
+st.info("💡 Atualização automática ativada: os dados são renovados automáticamente.")
 
 # --- SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA A CADA 5 SEGUNDOS ---
 time.sleep(1)
