@@ -1,5 +1,5 @@
 import streamlit as st
-import yfinance as yf
+import requests
 
 # Configuração básica da página
 st.set_page_config(page_title="Monitor de Capital", page_icon="📈", layout="wide")
@@ -7,46 +7,48 @@ st.set_page_config(page_title="Monitor de Capital", page_icon="📈", layout="wi
 st.title("🚀 Monitor de Fluxo de Capital em Tempo Real")
 st.write("Painel central de monitoramento de ativos, criptomoedas e mercado financeiro.")
 
-# Divisor visual
 st.markdown("---")
 
-st.header("🪙 Monitor de Criptomoedas (BTC, ETH, SOL)")
-st.write("Acompanhamento em tempo real das principais criptomoedas do mercado.")
+st.header("🪙 Monitor de Criptomoedas (Dados Oficiais da Binance)")
+st.write("Cotações em tempo real conectadas diretamente à alta liquidez do mercado.")
 
-# Dicionário com os ativos que queremos monitorar
-criptos = {
-    "Bitcoin (BTC)": "BTC-USD",
-    "Ethereum (ETH)": "ETH-USD",
-    "Solana (SOL)": "SOL-USD"
+# Pares oficiais na Binance (Mercado Spot)
+simbolos = {
+    "Bitcoin (BTC)": "BTCUSDT",
+    "Ethereum (ETH)": "ETHUSDT",
+    "Solana (SOL)": "SOLUSDT"
 }
 
-# Criamos colunas lado a lado na tela
 col1, col2, col3 = st.columns(3)
 colunas = [col1, col2, col3]
 
-# Buscamos os dados de cada criptomoeda e exibimos no painel
-for i, (nome, ticker) in enumerate(criptos.items()):
+# Função para buscar o preço direto na API pública da Binance
+def obter_preco_binance(symbol):
+    try:
+        url = f"https://api.binance.com/api/v3/ticker/24hr?symbol={symbol}"
+        resposta = requests.get(url, timeout=5)
+        if resposta.status_code == 200:
+            dados = resposta.json()
+            preco_atual = float(dados['lastPrice'])
+            variacao = float(dados['priceChangePercent'])
+            return preco_atual, variacao
+    except Exception as e:
+        pass
+    return None, None
+
+# Renderizar os dados nas colunas
+for i, (nome, ticker) in enumerate(simbolos.items()):
     with colunas[i]:
-        try:
-            # Puxa os dados do dia atual do Yahoo Finance
-            dados = yf.Ticker(ticker)
-            hist = dados.history(period="1d")
-            
-            if not hist.empty:
-                preco_atual = hist['Close'].iloc[-1]
-                preco_abertura = hist['Open'].iloc[0]
-                variacao = ((preco_atual - preco_abertura) / preco_abertura) * 100
-                
-                # Mostra um bloco visual bonito com o preço e a variação percentual
-                st.metric(
-                    label=nome, 
-                    value=f"$ {preco_atual:,.2f}", 
-                    delta=f"{variacao:.2f}%"
-                )
-            else:
-                st.warning(f"Dados indisponíveis para {nome}")
-        except Exception as e:
-            st.error(f"Erro ao carregar {nome}")
+        preco, variacao = obter_preco_binance(ticker)
+        
+        if preco is not None:
+            st.metric(
+                label=nome,
+                value=f"$ {preco:,.2f}",
+                delta=f"{variacao:.2f}%"
+            )
+        else:
+            st.warning(f"Erro ao conectar com a Binance para {nome}")
 
 st.markdown("---")
-st.info("💡 Dica: Atualize a página do navegador para buscar as cotações mais recentes do mercado.")
+st.info("💡 Dados sincronizados em tempo real com a liquidez global da Binance.")
