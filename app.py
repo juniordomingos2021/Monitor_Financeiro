@@ -56,5 +56,5 @@ st.markdown("---")
 st.info("💡 Atualização automática ativada: os dados são renovados a cada 5 segundos.")
 
 # --- SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA A CADA 5 SEGUNDOS ---
-time.sleep(5)
+time.sleep(1)
 st.rerun()
