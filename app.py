@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+import time
 
 # Configuração básica da página
 st.set_page_config(page_title="Monitor de Capital", page_icon="📈", layout="wide")
@@ -52,4 +53,8 @@ for i, (nome, ticker) in enumerate(pares.items()):
             st.warning(f"A sincronizar {nome}...")
 
 st.markdown("---")
-st.info("💡 Sincronizado com os servidores globais de dados de criptoativos.")
+st.info("💡 Atualização automática ativada: os dados são renovados a cada 5 segundos.")
+
+# --- SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA A CADA 5 SEGUNDOS ---
+time.sleep(5)
+st.rerun()
