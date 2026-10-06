@@ -2,30 +2,25 @@ import yfinance as yf
 
 def buscar_dados_acoes():
     """
-    Laboratório de Ações:
-    Usa a biblioteca yfinance para puxar os preços e calcular variações diárias
-    das principais empresas tecnológicas do mercado global.
+    Laboratório de Ações (Versão Blindada):
+    Usa yfinance de forma segura para extrair preços sem erros de 'nan'.
     """
-    try:
-        # Lista de tickers de ações globais
-        simbolos_acoes = ['AAPL', 'MSFT', 'NVDA', 'TSLA']
-        
-        resultados_acoes = {}
-        
-        for simbolo in simbolos_acoes:
-            # Puxa o objeto do ativo
+    simbolos_acoes = ['AAPL', 'MSFT', 'NVDA', 'TSLA']
+    resultados_acoes = {}
+    
+    for simbolo in simbolos_acoes:
+        try:
+            # Puxa os dados recentes do ativo
             acao = yf.Ticker(simbolo)
+            hist = acao.history(period="5d") # Puxa 5 dias para garantir que apanha dias úteis
             
-            # Puxa o histórico dos últimos 2 dias para calcular a variação
-            hist = acao.history(period="2d")
-            
-            if len(hist) >= 1:
-                # Preço de fecho mais recente
-                preco_atual = float(hist['Close'].iloc[-1])
+            if not hist.empty and 'Close' in hist.columns:
+                # Retira o último preço de fecho válido de forma segura
+                preco_atual = float(hist['Close'].dropna().iloc[-1])
                 
-                # Se houver pelo menos 2 dias, calcula a variação percentual
-                if len(hist) >= 2:
-                    preco_anterior = float(hist['Close'].iloc[-2])
+                # Se houver mais do que um registo, calcula a variação
+                if len(hist['Close'].dropna()) >= 2:
+                    preco_anterior = float(hist['Close'].dropna().iloc[-2])
                     variacao = ((preco_atual - preco_anterior) / preco_anterior) * 100
                 else:
                     variacao = 0.0
@@ -34,8 +29,11 @@ def buscar_dados_acoes():
                     'preco': preco_atual,
                     'variacao': variacao
                 }
+            else:
+                resultados_acoes[simbolo] = {'preco': 0.0, 'variacao': 0.0}
                 
-        return resultados_acoes
-    except Exception as e:
-        print(f"Erro ao consultar yfinance para ações: {e}")
-        return None
+        except Exception as e:
+            print(f"Erro ao processar {simbolo}: {e}")
+            resultados_acoes[simbolo] = {'preco': 0.0, 'variacao': 0.0}
+            
+    return resultados_acoes
