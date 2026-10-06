@@ -1,80 +1,56 @@
 import streamlit as st
-import requests
-import yfinance as yf
-import time
-from config_ativos import ATIVOS_MERCADO
+from modulos.crypto_binance import buscar_dados_crypto
+from modulos.acoes_yfinance import buscar_dados_acoes
+from modulos.portfolio_pessoal import obter_meu_portfolio
 
-# Configuração básica da página
-st.set_page_config(page_title="Monitor de Capital", page_icon="📈", layout="wide")
+st.set_page_config(page_title="Monitor de Fluxo de Capital", layout="wide")
 
 st.title("🚀 Monitor de Fluxo de Capital em Tempo Real")
 st.write("Painel central de monitoramento multisseorial de ativos e mercados globais.")
 
-st.markdown("---")
+# Criação das abas no Streamlit
+aba_crypto, aba_acoes, aba_portfolio = st.tabs(["Criptomoedas", "Ações (Globais/Tech)", "Meu Portefólio XTB"])
 
-# Criamos abas dinâmicas baseadas nas categorias do nosso ficheiro de configuração
-categorias = list(ATIVOS_MERCADO.keys())
-abas = st.tabs([f"📂 {cat}" for cat in categorias])
-
-# Função para buscar dados de cripto (Binance)
-def buscar_preco_binance(symbol):
-    try:
-        url = f"https://data-api.binance.vision/api/v3/ticker/24hr?symbol={symbol}"
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        resposta = requests.get(url, headers=headers, timeout=4)
-        if resposta.status_code == 200:
-            dados = resposta.json()
-            return float(dados['lastPrice']), float(dados['priceChangePercent'])
-    except:
-        pass
-    return None, None
-
-# Função para buscar dados gerais (Ações, Forex, B3, Commodities via yfinance)
-def buscar_preco_yfinance(symbol):
-    try:
-        dados = yf.Ticker(symbol)
-        hist = dados.history(period="2d")
-        if len(hist) >= 1:
-            preco_atual = hist['Close'].iloc[-1]
-            if len(hist) >= 2:
-                preco_anterior = hist['Close'].iloc[-2]
-                variacao = ((preco_atual - preco_anterior) / preco_anterior) * 100
-            else:
-                variacao = 0.0
-            return float(preco_atual), float(variacao)
-    except:
-        pass
-    return None, None
-
-# Preencher cada aba com os seus respetivos ativos
-for idx, categoria in enumerate(categorias):
-    with abas[idx]:
-        st.subheader(f"📊 Monitoramento: {categoria}")
-        ativos_da_categoria = ATIVOS_MERCADO[categoria]
-        
-        # Criar colunas para os ativos da categoria
-        cols = st.columns(len(ativos_da_categoria))
-        
-        for i, (nome, ticker) in enumerate(ativos_da_categoria.items()):
+with aba_crypto:
+    st.subheader("📊 Monitoramento: Criptomoedas")
+    dados_crypto = buscar_dados_crypto()
+    if dados_crypto:
+        cols = st.columns(len(dados_crypto))
+        for i, (simbolo, info) in enumerate(dados_crypto.items()):
             with cols[i]:
-                # Se for cripto, usa a API da Binance; caso contrário, usa o yfinance
-                if categoria == "Criptomoedas":
-                    preco, variacao = buscar_preco_binance(ticker)
-                else:
-                    preco, variacao = buscar_preco_yfinance(ticker)
-                
-                if preco is not None:
-                    st.metric(
-                        label=nome,
-                        value=f"$ {preco:,.2f}" if categoria != "B3 (Brasil)" else f"R$ {preco:,.2f}",
-                        delta=f"{variacao:.2f}%"
-                    )
-                else:
-                    st.warning(f"A carregar {nome}...")
+                st.metric(label=simbolo, value=f"$ {info['preco']:,.2f}", delta=f"{info['variacao']:.2f}%")
 
-st.markdown("---")
-st.info("💡 Atualização automática ativada: o painel renova os dados de todos os mercados a cada 5 segundos.")
+with aba_acoes:
+    st.subheader("📊 Monitoramento: Ações Globais")
+    dados_acoes = buscar_dados_acoes()
+    if dados_acoes:
+        cols = st.columns(len(dados_acoes))
+        for i, (simbolo, info) in enumerate(dados_acoes.items()):
+            with cols[i]:
+                st.metric(label=simbolo, value=f"$ {info['preco']:,.2f}", delta=f"{info['variacao']:.2f}%")
 
-# --- ATUALIZAÇÃO AUTOMÁTICA A CADA 5 SEGUNDOS ---
-time.sleep(5)
-st.rerun()
+with aba_portfolio:
+    st.subheader("💼 Meu Portefólio Pessoal (XTB / Ativos)")
+    meu_portfolio = obter_meu_portfolio()
+    
+    if meu_portfolio:
+        for item in meu_portfolio:
+            # Mostra cada ativo do portefólio numa linha detalhada
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.markdown(f"**Ativo:** {item['ticker']}")
+                st.text(f"Data Compra: {item['data']}")
+            with col2:
+                st.markdown(f"**Quantidade:** {item['quantidade']}")
+                st.text(f"Preço Entrada: $ {item['preco_entrada']:,.2f}")
+            with col3:
+                st.markdown(f"**Preço Atual:** $ {item['preco_atual']:,.2f}")
+            with col4:
+                st.metric(
+                    label="Lucro / Prejuízo", 
+                    value=f"$ {item['lucro_prejuizo']:,.2f}", 
+                    delta=f"{item['variacao_pct']:.2f}%"
+                )
+            st.divider()
+
+st.info("💡 Atualização ativa: o painel recolhe os dados em tempo real sempre que atualiza a página.")
