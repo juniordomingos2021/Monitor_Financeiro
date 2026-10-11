@@ -1,9 +1,13 @@
 import streamlit as st
+from streamlit_autorefresh import st_autorefresh
 from modulos.crypto_binance import buscar_dados_crypto
 from modulos.acoes_yfinance import buscar_dados_acoes
 from modulos.portfolio_pessoal import obter_meu_portfolio
 
 st.set_page_config(page_title="Monitor de Fluxo de Capital", layout="wide")
+
+# Configura a atualização automática a cada 5 segundos (5000 milissegundos)
+st_autorefresh(interval=5000, limit=None, key="atualizador_automatico")
 
 st.title("🚀 Monitor de Fluxo de Capital em Tempo Real")
 st.write("Painel central de monitoramento multisseorial de ativos e mercados globais.")
@@ -35,7 +39,6 @@ with aba_portfolio:
     
     if meu_portfolio:
         for item in meu_portfolio:
-            # Mostra cada ativo do portefólio numa linha detalhada
             col1, col2, col3, col4 = st.columns(4)
             with col1:
                 st.markdown(f"**Ativo:** {item['ticker']}")
@@ -53,4 +56,4 @@ with aba_portfolio:
                 )
             st.divider()
 
-st.info("💡 Atualização ativa: o painel recolhe os dados em tempo real sempre que atualiza a página.")
+st.info("💡 Atualização ativa: o painel renova os dados de todos os mercados a cada 5 segundos.")
