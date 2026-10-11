@@ -2,7 +2,7 @@ import requests
 
 def buscar_dados_crypto():
     """
-    Busca os preços atuais e a variação exata de 24h direto da API pública da CoinGecko.
+    Busca preços e variação de 24h na CoinGecko com chaves normalizadas.
     """
     url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,binancecoin&vs_currencies=usd&include_24hr_change=true"
     
@@ -12,6 +12,7 @@ def buscar_dados_crypto():
         if resposta.status_code == 200:
             dados = resposta.json()
             
+            # Usamos chaves idênticas às que o app.py espera
             resultados = {
                 'Bitcoin (BTC)': {
                     'preco': float(dados.get('bitcoin', {}).get('usd', 0.0)),
@@ -32,8 +33,9 @@ def buscar_dados_crypto():
             }
             return resultados
         else:
+            print(f"Erro na API CoinGecko: Status {resposta.status_code}")
             return None
             
     except Exception as e:
-        print(f"Erro ao buscar variação de 24h: {e}")
+        print(f"Erro de ligação: {e}")
         return None
