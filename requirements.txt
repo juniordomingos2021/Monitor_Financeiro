@@ -3,3 +3,4 @@ requests
 yfinance
 panda
 ccxt
+streamlit-autorefresh
