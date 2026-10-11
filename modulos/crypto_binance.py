@@ -1,60 +1,47 @@
-import ccxt
+import yfinance as yf
 
 def buscar_dados_crypto():
     """
-    Laboratório de Criptomoedas (Versão Blindada com Fallback):
-    Tenta ligar à Binance via ccxt. Se a rede falhar ou bloquear o IP na nuvem,
-    utiliza valores de segurança para que o painel nunca fique vazio.
+    Laboratório de Criptomoedas (Via yfinance):
+    Usa o Yahoo Finance para puxar cotações globais de criptomoedas de forma
+    estável e livre de bloqueios de IP em servidores na nuvem.
     """
-    simbolos = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT']
+    # Tickers de criptomoedas no Yahoo Finance
+    simbolos = {
+        'Bitcoin (BTC)': 'BTC-USD',
+        'Ethereum (ETH)': 'ETH-USD',
+        'Solana (SOL)': 'SOL-USD',
+        'Binance Coin (BNB)': 'BNB-USD'
+    }
+    
     resultados = {}
     
-    try:
-        exchange = ccxt.binance({
-            'enableRateLimit': True,
-            'options': {'defaultType': 'spot'}
-        })
-        
-        for simbolo in simbolos:
-            try:
-                ticker = exchange.fetch_ticker(simbolo)
-                preco = float(ticker.get('last', 0.0))
-                variacao = float(ticker.get('percentage', 0.0) or 0.0)
-            except Exception:
-                # Fallback individual caso falhe um ativo específico
-                precos_fallback = {
-                    'BTC/USDT': 85528.00, 
-                    'ETH/USDT': 2704.77, 
-                    'SOL/USDT': 120.50, 
-                    'BNB/USDT': 780.62
-                }
-                preco = precos_fallback.get(simbolo, 1000.0)
+    for nome_limpo, simbolo in simbolos.items():
+        try:
+            # Puxa os dados recentes do ativo no Yahoo Finance
+            crypto = yf.Ticker(simbolo)
+            hist = crypto.history(period="2d")
+            
+            if not hist.empty and 'Close' in hist.columns:
+                preco_atual = float(hist['Close'].dropna().iloc[-1])
+                
+                # Calcula a variação diária se houver pelo menos 2 dias de histórico
+                if len(hist['Close'].dropna()) >= 2:
+                    preco_anterior = float(hist['Close'].dropna().iloc[-2])
+                    variacao = ((preco_atual - preco_anterior) / preco_anterior) * 100
+                else:
+                    variacao = 0.0
+            else:
+                preco_atual = 0.0
                 variacao = 0.0
                 
-            # Formatação do nome
-            nome_limpo = simbolo.split('/')[0]
-            if nome_limpo == 'BTC':
-                nome_limpo = 'Bitcoin (BTC)'
-            elif nome_limpo == 'ETH':
-                nome_limpo = 'Ethereum (ETH)'
-            elif nome_limpo == 'SOL':
-                nome_limpo = 'Solana (SOL)'
-            elif nome_limpo == 'BNB':
-                nome_limpo = 'Binance Coin (BNB)'
-                
             resultados[nome_limpo] = {
-                'preco': preco,
+                'preco': preco_atual,
                 'variacao': variacao
             }
             
-        return resultados
-        
-    except Exception as e:
-        print(f"Erro geral ao ligar à Binance: {e}")
-        # Fallback total de segurança para o painel nunca falhar
-        return {
-            'Bitcoin (BTC)': {'preco': 85528.00, 'variacao': -1.25},
-            'Ethereum (ETH)': {'preco': 2704.77, 'variacao': -1.04},
-            'Solana (SOL)': {'preco': 120.50, 'variacao': -0.91},
-            'Binance Coin (BNB)': {'preco': 780.62, 'variacao': -3.59}
-        }
+        except Exception as e:
+            print(f"Erro ao buscar {nome_limpo} via yfinance: {e}")
+            resultados[nome_limpo] = {'preco': 0.0, 'variacao': 0.0}
+            
+    return resultados
