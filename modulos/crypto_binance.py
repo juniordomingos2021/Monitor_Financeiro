@@ -1,47 +1,39 @@
-import yfinance as yf
+import requests
 
 def buscar_dados_crypto():
     """
-    Laboratório de Criptomoedas (Via yfinance):
-    Usa o Yahoo Finance para puxar cotações globais de criptomoedas de forma
-    estável e livre de bloqueios de IP em servidores na nuvem.
+    Busca os preços atuais e a variação exata de 24h direto da API pública da CoinGecko.
     """
-    # Tickers de criptomoedas no Yahoo Finance
-    simbolos = {
-        'Bitcoin (BTC)': 'BTC-USD',
-        'Ethereum (ETH)': 'ETH-USD',
-        'Solana (SOL)': 'SOL-USD',
-        'Binance Coin (BNB)': 'BNB-USD'
-    }
+    url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,binancecoin&vs_currencies=usd&include_24hr_change=true"
     
-    resultados = {}
-    
-    for nome_limpo, simbolo in simbolos.items():
-        try:
-            # Puxa os dados recentes do ativo no Yahoo Finance
-            crypto = yf.Ticker(simbolo)
-            hist = crypto.history(period="2d")
+    try:
+        resposta = requests.get(url, timeout=10)
+        
+        if resposta.status_code == 200:
+            dados = resposta.json()
             
-            if not hist.empty and 'Close' in hist.columns:
-                preco_atual = float(hist['Close'].dropna().iloc[-1])
-                
-                # Calcula a variação diária se houver pelo menos 2 dias de histórico
-                if len(hist['Close'].dropna()) >= 2:
-                    preco_anterior = float(hist['Close'].dropna().iloc[-2])
-                    variacao = ((preco_atual - preco_anterior) / preco_anterior) * 100
-                else:
-                    variacao = 0.0
-            else:
-                preco_atual = 0.0
-                variacao = 0.0
-                
-            resultados[nome_limpo] = {
-                'preco': preco_atual,
-                'variacao': variacao
+            resultados = {
+                'Bitcoin (BTC)': {
+                    'preco': float(dados.get('bitcoin', {}).get('usd', 0.0)),
+                    'variacao': float(dados.get('bitcoin', {}).get('usd_24h_change', 0.0) or 0.0)
+                },
+                'Ethereum (ETH)': {
+                    'preco': float(dados.get('ethereum', {}).get('usd', 0.0)),
+                    'variacao': float(dados.get('ethereum', {}).get('usd_24h_change', 0.0) or 0.0)
+                },
+                'Solana (SOL)': {
+                    'preco': float(dados.get('solana', {}).get('usd', 0.0)),
+                    'variacao': float(dados.get('solana', {}).get('usd_24h_change', 0.0) or 0.0)
+                },
+                'Binance Coin (BNB)': {
+                    'preco': float(dados.get('binancecoin', {}).get('usd', 0.0)),
+                    'variacao': float(dados.get('binancecoin', {}).get('usd_24h_change', 0.0) or 0.0)
+                }
             }
+            return resultados
+        else:
+            return None
             
-        except Exception as e:
-            print(f"Erro ao buscar {nome_limpo} via yfinance: {e}")
-            resultados[nome_limpo] = {'preco': 0.0, 'variacao': 0.0}
-            
-    return resultados
+    except Exception as e:
+        print(f"Erro ao buscar variação de 24h: {e}")
+        return None
